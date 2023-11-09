@@ -1,0 +1,273 @@
+import interactions
+from interactions import Permissions, StringSelectMenu, Embed, slash_default_member_permission, slash_command, Intents, OptionType, slash_option, File, Button, ButtonStyle, listen, SlashCommandChoice
+from interactions.api.events import Component
+import requests
+import os
+import io
+import worksheets
+import tasks
+import league
+import vars
+import random
+
+intents=Intents.DEFAULT
+bot = interactions.Client(intents=intents)
+
+currentDir = os.path.realpath(__file__)[:-6]
+print(currentDir)
+
+@listen()
+async def on_startup(): 
+    print("Bot is running")
+
+async def check_admin(ctx):
+    if ctx.author.id in vars.admins:
+        return True
+    await ctx.send("You do not have permission to do that", ephemeral=True)
+    return False
+
+async def check_channel(ctx, channel_type):
+    compare = []
+    error_message = "You do not have permission to do that in this channel\n"
+
+    if channel_type == "competitive":
+        compare = vars.competitive_channels
+        error_message += "Use the command in #competitive-matches"
+    else:
+        compare = vars.commands_channels
+        error_message += "Use the command in #commands"
+
+    if (ctx.channel.id  in compare) or await check_admin(ctx):
+        return True
+    await ctx.send(error_message, ephemeral=True)
+    return False
+
+def interpolate(f_co, t_co, interval):
+    det_co =[(t - f) / interval for f , t in zip(f_co, t_co)]
+    for i in range(interval):
+        yield [round(f + det * i) for f, det in zip(f_co, det_co)]
+
+@slash_command(name="match_score", description="Get the scores of all matches between two teams", scopes=vars.guildids)
+@slash_option(name="league", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, choices=worksheets.leagues)
+@slash_option(name="team1", description="Team 1", opt_type=OptionType.STRING, required=True)
+@slash_option(name="team2", description="Team 2", opt_type=OptionType.STRING, required=True)
+async def get_scores_teams(ctx, league, team1, team2):
+    if await check_channel(ctx, "commands"):
+        es = []
+        fs = []
+
+        curEmbed = 0
+
+        if (league == "any"):
+            for l in worksheets.leagues:
+                if l == "any": continue
+                e, f = worksheets.get_scores_teams_aux(l, team1, team2)
+                es += e
+                fs += f
+        else:
+            e, f = worksheets.get_scores_teams_aux(league, team1, team2)
+            es += e
+            fs += f
+
+        if (len(es) > 1):
+            buttons = [Button(style=ButtonStyle.BLUE, label="Previous", custom_id="prev", disabled=True), Button(style=ButtonStyle.BLUE, label="Next", custom_id="next")]
+
+            async def check_get_scores_teams(component: Component) -> bool:
+                nonlocal curEmbed
+                if (component.ctx.custom_id == "next"):
+                    curEmbed += 1
+                    if (curEmbed == len(es)-1): buttons[1].disabled = True
+                    buttons[0].disabled = False
+                elif (component.ctx.custom_id == "prev"):
+                    curEmbed -= 1
+                    if (curEmbed == 0): buttons[0].disabled = True
+                    buttons[1].disabled = False
+                
+                buffer = io.BytesIO()
+                fs[curEmbed][1].save(buffer, format='PNG')
+                buffer.seek(0) 
+                f = File(buffer, fs[curEmbed][0])
+                await component.ctx.edit_origin(embed = es[curEmbed], file=f, components=buttons)
+                return True
+            
+
+            buffer = io.BytesIO()
+            fs[curEmbed][1].save(buffer, format='PNG')
+            buffer.seek(0) 
+            f = File(buffer, fs[curEmbed][0])
+            message = await ctx.send(embed = es[curEmbed], file=f, components=buttons)
+            while (True):
+                try:
+                    await bot.wait_for_component(components=buttons, check=check_get_scores_teams, timeout=60)
+                except:
+                    await message.edit(components=[])
+                    return
+        elif (len(es) == 1):
+            buffer = io.BytesIO()
+            fs[0][1].save(buffer, format='PNG')
+            buffer.seek(0) 
+            f = File(buffer, fs[0][0])
+            await ctx.send(embed = es[0], file=f)
+        else:
+            await ctx.send("No matches found", ephemeral=True)
+
+
+@slash_command(name="start_league", description="Setups and starts a league", scopes=vars.guildids)
+@slash_default_member_permission(Permissions.MANAGE_ROLES)
+@slash_option(name="league_name", description="Name of the league", opt_type=OptionType.STRING, required=True)
+@slash_option(name="challonge_link", description="Link to the Challonge tournament", opt_type=OptionType.STRING, required=True)
+@slash_option(name="map_pool", description="Map pool for the tournament, separate maps with ENTER", opt_type=OptionType.STRING, required=True)
+async def start_league(ctx, league_name, challonge_link, map_pool):
+    if await check_admin(ctx):
+        map_pool = map_pool.replace("\\", "\\\\")
+        maps = map_pool.split(",")
+        for m in range(len(maps)):
+            maps[m] = maps[m].strip()
+        await league.start_league(ctx, league_name, challonge_link, maps)
+
+@slash_command(name="end_league", description="Ends a league", scopes=vars.guildids)
+@slash_default_member_permission(Permissions.MANAGE_ROLES)
+@slash_option(name="confirm", description="ARE YOU SURE?", opt_type=OptionType.STRING, required=False)
+async def end_league(ctx, confirm="NO"):
+    if await check_admin(ctx):
+        await league.end_league(ctx, confirm)
+
+@slash_command(name="show_delay_tokens", description="Prints the delay tokens each team has", scopes=vars.guildids)
+async def show_delay_tokens(ctx):
+    if await check_channel(ctx, "commands"):
+        await league.show_delay_tokens(ctx, False)
+
+@slash_command(name="update_delay_tokens", description="Removes or Adds a delay token to a team", scopes=vars.guildids)
+@slash_default_member_permission(Permissions.MANAGE_ROLES)
+@slash_option(name="team_name", description="Name of the team", opt_type=OptionType.STRING, required=True)
+@slash_option(name="action", description="Which action to perform", opt_type=OptionType.STRING, required=True, choices=[SlashCommandChoice(name="remove", value="remove"),SlashCommandChoice(name="add", value="add")])
+async def update_delay_tokens(ctx, team_name, action):
+    if await check_admin(ctx):
+        await league.update_delay_tokens(ctx, team_name, action)
+
+@slash_command(name="when2meet", description="Creates and shows https://crab.fit links", scopes=vars.guildids)
+@slash_default_member_permission(Permissions.MANAGE_ROLES)
+@slash_option(name="confirm", description="This will ping multiple users and create w2m links", opt_type=OptionType.STRING, required=True)
+async def when2meet(ctx, confirm):
+    if await check_admin(ctx):
+        if (confirm != "YES I AM SURE"):
+            await ctx.send("Write `YES I AM SURE` as an argument to confirm\n\nYou should preview the message before running this command `/preview_when2meet`", ephemeral=True)
+            return
+        await league.when2meet(ctx, "create")
+
+@slash_command(name="preview_when2meet", description="Previews the /when2meet command", scopes=vars.guildids)
+@slash_default_member_permission(Permissions.MANAGE_ROLES)
+async def preview_when2meet(ctx):
+    if await check_admin(ctx):
+        await league.when2meet(ctx, "preview")
+
+def get_all_league_names():
+    json_file = league.get_json()
+    ls = []
+    ls += worksheets.leagues
+    if json_file["current_league"]["name"] != "":
+        ls.insert(0, SlashCommandChoice(name=json_file["current_league"]["name"], value=json_file["current_league"]["name"]))
+    return ls
+
+def get_challonge_league_names():
+    json_file = league.get_json()
+    ls = [SlashCommandChoice(name=json_file["current_league"]["name"], value=json_file["current_league"]["name"])]
+    for l in json_file["previous_leagues"]:
+        if (l["challonge_link"] != ""):
+            ls.insert(1, SlashCommandChoice(name=l["name"], value=l["name"]))
+    return ls
+
+@slash_command(name="challonge_link", description="Prints the link of the Challong tournament", scopes=vars.guildids)
+@slash_option(name="league_name", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, choices=get_challonge_league_names())
+async def challonge_link(ctx, league_name):
+    if await check_channel(ctx, "commands"):
+        url = await league.get_challonge_link(ctx, league_name)
+
+        if (url == ""):
+            await ctx.send(league_name + " has no challonge link", ephemeral=True)
+        else:
+            await ctx.send(url)
+
+@slash_command(name="challonge_image", description="Display a Live image of a Challonge tournament", scopes=vars.guildids)
+@slash_option(name="league_name", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, choices=get_challonge_league_names())
+async def challonge_image(ctx, league_name):
+    if await check_channel(ctx, "commands"):
+        await league.get_challonge_image(ctx, league_name)
+
+msg_map_banning = None
+
+@slash_command(name="map_banning", description="Handles the map banning process", scopes=vars.guildids)
+@slash_option(name="captain_water", description="Who's the captain of team Water?", opt_type=OptionType.USER, required=True)
+@slash_option(name="captain_fire", description="Who's the captain of team Fire?", opt_type=OptionType.USER, required=True)
+async def map_banning(ctx, captain_water, captain_fire):
+    global msg_map_banning
+    if await check_channel(ctx, "competitive"):
+        json_file = league.get_json()
+        maps = json_file["current_league"]["map_pool"]
+        maps_str = ""
+        maps_available = len(maps)
+        for i in range(len(maps)):
+            maps_str += maps[i] + "\n"
+
+        captain_to_pick = random.choice([True, False]) #True = water, False = fire
+
+        emb = Embed(title="Map Ban", description=(captain_water.mention if captain_to_pick else captain_fire.mention) + "'s ban\n\n" + maps_str, color=0x3498db)
+
+        buttons = [StringSelectMenu(
+                    maps,
+                    placeholder="What map to ban?",
+                    min_values=1,
+                    max_values=1,
+                )]
+        async def ban_map(component: Component) -> bool:
+                nonlocal emb
+                nonlocal maps
+                nonlocal maps_str
+                nonlocal maps_available
+                nonlocal buttons
+                nonlocal captain_to_pick
+
+                if captain_to_pick and component.ctx.author.id != captain_water.id:
+                    await component.ctx.send("You are not the captain of team Water", ephemeral=True)
+                    return False
+                if not captain_to_pick and component.ctx.author.id != captain_fire.id:
+                    await component.ctx.send("You are not the captain of team Fire", ephemeral=True)
+                    return False
+                
+                for m in range(len(maps)):
+                    if (component.ctx.values[0] == maps[m]):
+                        maps.pop(m)
+                        maps_str = ""
+                        for i in range(len(maps)):
+                            maps_str += maps[i] + "\n"
+                        captain_to_pick = not captain_to_pick
+                        desc = (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s ban\n\n" + maps_str
+                        maps_available-=1
+                        if maps_available == 1:
+                            desc = maps_str
+                        emb = Embed(title="Map Ban", description=desc, color=0x3498db)
+                        break
+
+                buttons = [StringSelectMenu(
+                    maps,
+                    placeholder="What map to ban?",
+                    min_values=1,
+                    max_values=1,
+                )]
+                
+                if (maps_available == 1):
+                    await component.ctx.edit_origin(embed=emb, components=[])
+                    return False
+                
+                await component.ctx.edit_origin(embed=emb, components=buttons)
+                return True
+        
+        msg_map_banning = await ctx.send(embed=emb, components=buttons)
+        while (True):
+                try:
+                    await bot.wait_for_component(components=buttons, check=ban_map, timeout=300)
+                except:
+                    await msg_map_banning.edit(components=[])
+                    return
+
+bot.start(vars.bot_token)
