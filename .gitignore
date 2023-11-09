@@ -1,4 +1,8 @@
 # Google API key
 intrudercompdatabase*.json 
 
-__pycache__/
+# Private stuff
+src/vars.py
+src/league.json
+
+__pycache__
