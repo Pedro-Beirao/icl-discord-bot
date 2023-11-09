@@ -106,7 +106,7 @@ async def get_challonge_image(ctx, league_name):
         return
     url += ".svg"
     svg = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}).content
-    svg2png(bytestring=svg,write_to='output.png', background_color="white", output_width=3000)
+    svg2png(bytestring=svg,write_to='output.png', background_color="white", output_width=1920)
     await ctx.send(file='output.png')
 
 async def get_post_when2meet(ctx, matches, times):
@@ -228,7 +228,7 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
     await ctx.send(text_to_send, allowed_mentions=AllowedMentions(roles=ctx.guild.roles), ephemeral=True)
         
 
-async def when2meet(ctx, action):
+async def when2meet(ctx):
     json_file = get_json()
 
     await ctx.defer(ephemeral=True)

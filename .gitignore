@@ -4,5 +4,6 @@ intrudercompdatabase*.json
 # Private stuff
 src/vars.py
 src/league.json
+src/output.png
 
 __pycache__

@@ -47,6 +47,24 @@ def interpolate(f_co, t_co, interval):
     for i in range(interval):
         yield [round(f + det * i) for f, det in zip(f_co, det_co)]
 
+@slash_command(name="help", description="Documents every command", scopes=vars.guildids)
+async def help(ctx):
+    emb = Embed(title="Help", description="/help - Shows this prompt", color=0x3498db)
+    emb.add_field(name="#commands", value="/challonge_link - Displays the challonge link of the selected league\n"
+                                          "/challonge_image - Displays a live image of the selected league\n"
+                                          "/show_delay_tokens - Displays the delay tokens each team has on the current league\n"
+                                          "/match_score - Displays the scores of all matches between two teams\n"
+                                          , inline=False)
+    emb.add_field(name="#competitive-matches", value="/map_banning - Handles the map banning process\n"
+                                                     , inline=False)
+    if ctx.author.id in vars.admins:
+        emb.add_field(name="Admin Only", value="/start_league - Starts a league (needs a map pool to be provided + challonge link)\n"
+                                               "/end_league - Ends a league\n"
+                                               "/update_delay_tokens - Adds or removes a delay token from a team\n"
+                                               "/when2meet - Creates and shows https://crab.fit links\n"
+                                               , inline=False)
+    await ctx.send(embed = emb, ephemeral=True)
+
 @slash_command(name="match_score", description="Get the scores of all matches between two teams", scopes=vars.guildids)
 @slash_option(name="league", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, choices=worksheets.leagues)
 @slash_option(name="team1", description="Team 1", opt_type=OptionType.STRING, required=True)
@@ -153,13 +171,7 @@ async def when2meet(ctx, confirm):
         if (confirm != "YES I AM SURE"):
             await ctx.send("Write `YES I AM SURE` as an argument to confirm\n\nYou should preview the message before running this command `/preview_when2meet`", ephemeral=True)
             return
-        await league.when2meet(ctx, "create")
-
-@slash_command(name="preview_when2meet", description="Previews the /when2meet command", scopes=vars.guildids)
-@slash_default_member_permission(Permissions.MANAGE_ROLES)
-async def preview_when2meet(ctx):
-    if await check_admin(ctx):
-        await league.when2meet(ctx, "preview")
+        await league.when2meet(ctx)
 
 def get_all_league_names():
     json_file = league.get_json()
