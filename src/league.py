@@ -97,13 +97,13 @@ async def get_challonge_link(ctx, league_name):
     return url
 
 async def get_challonge_image(ctx, league_name):
-    await ctx.defer()
-
     url = await get_challonge_link(ctx, league_name)
 
     if (url == ""):
         await ctx.send(league_name + " has no challonge link", ephemeral=True)
         return
+    
+    await ctx.defer()
     url += ".svg"
     svg = requests.get(url, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}).content
     svg2png(bytestring=svg,write_to='output.png', background_color="white", output_width=1920)

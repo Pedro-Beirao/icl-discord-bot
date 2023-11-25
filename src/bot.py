@@ -183,7 +183,10 @@ def get_all_league_names():
 
 def get_challonge_league_names():
     json_file = league.get_json()
-    ls = [SlashCommandChoice(name=json_file["current_league"]["name"], value=json_file["current_league"]["name"])]
+    ls = []
+    if json_file["current_league"]["name"] != "":
+        ls = [SlashCommandChoice(name=json_file["current_league"]["name"], value=json_file["current_league"]["name"])]
+    
     for l in json_file["previous_leagues"]:
         if (l["challonge_link"] != ""):
             ls.insert(1, SlashCommandChoice(name=l["name"], value=l["name"]))
@@ -218,6 +221,11 @@ async def map_banning(ctx, captain_water, captain_fire):
         maps = json_file["current_league"]["map_pool"]
         maps_str = ""
         maps_available = len(maps)
+
+        if maps_available == 0:
+            await ctx.send("No league is currently running", ephemeral=True)
+            return
+
         for i in range(len(maps)):
             maps_str += maps[i] + "\n"
 
