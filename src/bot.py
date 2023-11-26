@@ -31,7 +31,7 @@ async def check_admin(ctx):
     try:
         if ctx.author.id in vars.guilds[ctx.guild.id]['admins']:
             json_file = league.get_json()
-            if ctx.guild.id != json_file["current_league"]["owner_guildid"]:
+            if (json_file["current_league"]["owner_guildid"] != 0) and (ctx.guild.id != json_file["current_league"]["owner_guildid"]):
                 await ctx.send("A league is already running in " + bot.get_guild(json_file["current_league"]["owner_guildid"]).name, ephemeral=True)
                 return False
             return True
