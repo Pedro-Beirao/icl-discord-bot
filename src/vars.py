@@ -1,8 +1,14 @@
-guildids = [] # Guilds that the bot is in
-admins = [] # Admins of the bot
-commands_channels = [] # Channel where commands can be used
-competitive_channels = [] # Channel where competitive commands (Map Banning) can be used
+guilds = \
+{
+    0: # Guild id
+    {
+        'admins': [0], # List of the admins on this guild
+        'commands_channel': 0,
+        'competitive_channel': 0
+    }
+}
 
+error_logs_channel = 0 # Error norification will be sent to this channel (keep it 0, if you dont want notifs)
 bot_token = "" # Bot token
 
 challonge_username = "" # Challonge username
