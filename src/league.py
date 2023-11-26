@@ -14,7 +14,7 @@ def get_json():
 async def start_league(ctx, league_name, challonge_link, maps):
     json_file = get_json()
     if (json_file["current_league"]["name"] != ""):
-        await ctx.send("A league is already running. End it with /end_league", hidden=True)
+        await ctx.send("A league is already running. End it with /end_league", ephemeral=True)
         return
     
     id = challonge_link.split()[0].split("/")[-1]
@@ -27,10 +27,10 @@ async def start_league(ctx, league_name, challonge_link, maps):
     for team in response.json():
         delay_token_dict[team["participant"]["name"]] = 1
 
-    json_file["current_league"] = {"name": league_name, "challonge_link": challonge_link, "map_pool": maps, "delay_tokens": delay_token_dict}
+    json_file["current_league"] = {"name": league_name, "challonge_link": challonge_link, "map_pool": maps, "delay_tokens": delay_token_dict, "owner_guildid": ctx.guild.id}
     with open('league.json', 'w',) as outfile:
         json.dump(json_file, outfile, indent=4)
-        await ctx.send(league_name + " had been started!")
+        await ctx.send(league_name + " had been started!", ephemeral=True)
 
 async def end_league(ctx, confirm):
     json_file = get_json()
@@ -45,7 +45,7 @@ async def end_league(ctx, confirm):
     previous_league = json_file["current_league"]["name"]
     
     json_file["previous_leagues"].append({"name": json_file["current_league"]["name"], "challonge_link": json_file["current_league"]["challonge_link"]})
-    json_file["current_league"] = {"name": "", "challonge_link": "", "map_pool": [], "delay_tokens": {}}
+    json_file["current_league"] = {"name": "", "challonge_link": "", "map_pool": [], "delay_tokens": {}, "owner_guildid": 0}
     with open('league.json', 'w') as outfile:
         json.dump(json_file, outfile, indent=4)
         await ctx.send(previous_league + " has been ended!")
