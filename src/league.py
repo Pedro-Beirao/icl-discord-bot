@@ -143,6 +143,11 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
     sunday = str(int(friday)+2000000)
     monday = str(int(friday)+3000000)
 
+    if len(friday) != 8: friday = "0" + friday
+    if len(saturday) != 8: saturday = "0" + saturday
+    if len(sunday) != 8: sunday = "0" + sunday
+    if len(monday) != 8: monday = "0" + monday
+
     times = [
         "0700-"+friday,
         "0800-"+friday,
@@ -227,7 +232,6 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
     
     await ctx.send(text_to_send, allowed_mentions=AllowedMentions(roles=ctx.guild.roles), ephemeral=True)
         
-
 async def when2meet(ctx):
     json_file = get_json()
 
@@ -243,7 +247,7 @@ async def when2meet(ctx):
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
     matches_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
     if matches_response.status_code != 200:
-        await ctx.send("Error with Challonge API. Please try again laterb", ephemeral=True)
+        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
         return
     matches_json_response = matches_response.json()
 
@@ -290,3 +294,55 @@ async def when2meet(ctx):
             makeup_matches_with_names.append([player1, player2])
 
     await create_when2meet(ctx, matches_with_names, makeup_matches_with_names)
+
+async def report_scoreboard(ctx, guards, intruders, scoreboard):
+    if (not scoreboard.content_type.startswith("image")):
+        await ctx.send("File is not an image\nIt is " + scoreboard.content_type, ephemeral=True)
+        return
+
+    json_file = get_json()
+
+    id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
+
+    matches_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+    if matches_response.status_code != 200:
+        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
+        return
+    matches_json_response = matches_response.json()
+
+    participants_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+    if participants_response.status_code != 200:
+        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
+        return
+    participants_json_response = participants_response.json()
+
+    guards_id = 0
+    intruders_id = 0
+    for participant in participants_json_response:
+        if (participant["participant"]["name"].lower() == guards.lower()):
+            guards_id = participant["participant"]["group_player_ids"][0]
+        
+        if (participant["participant"]["name"].lower() == intruders.lower()):
+            intruders_id = participant["participant"]["group_player_ids"][0]
+
+    if (guards_id == 0 or intruders_id == 0):
+        await ctx.send("The selected team names do not exist in this tournament", ephemeral=True)
+        return
+
+    post_response = None
+    for match in matches_json_response:
+        if (match["match"]["state"] != "open"):
+            continue
+        if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
+            post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':scoreboard.proxy_url, 'description': 'Guards:'+guards.upper()+" | Intruders:"+intruders.upper()}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+            if post_response.status_code != 200:
+                await ctx.send("Attachment creation failed. You should report this to PBeGood", ephemeral=True)
+                return
+            break
+
+    if post_response == None:
+        await ctx.send("No available matches between those teams were found.\nMaybe the scoreboard of this match has already been reported\n\nIf you think the bot is wrong, report the match scoreboard without using the bot", ephemeral=True)
+        return
+
+
+    await ctx.send("Guards: "+guards.upper() + "\nIntruders: "+intruders.upper() + "\n\n" + scoreboard.proxy_url)

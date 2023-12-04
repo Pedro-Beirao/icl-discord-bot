@@ -32,7 +32,7 @@ async def check_admin(ctx):
         if ctx.author.id in vars.guilds[ctx.guild.id]['admins']:
             json_file = league.get_json()
             if (json_file["current_league"]["owner_guildid"] != 0) and (ctx.guild.id != json_file["current_league"]["owner_guildid"]):
-                await ctx.send("A league is already running in " + bot.get_guild(json_file["current_league"]["owner_guildid"]).name, ephemeral=True)
+                await ctx.send("A league is already running in " + bot.get_guild(json_file["current_league"]["owner_guildid"]).name + "\n\nAdmins actions are disabled until that league ends.", ephemeral=True)
                 return False
             return True
     except: pass
@@ -46,13 +46,26 @@ async def check_channel(ctx, channel_type):
 
         if channel_type == "competitive":
             compare = vars.guilds[ctx.guild.id]['competitive_channel']
-            error_message += "Use the command in #competitive-matches"
-        else:
+            error_message += "Use the command in <#"+str(compare)+">"
+        elif channel_type == "commands":
             compare = vars.guilds[ctx.guild.id]['commands_channel']
-            error_message += "Use the command in #commands"
+            error_message += "Use the command in <#"+str(compare)+">"
+        elif channel_type == "results":
+            compare = vars.guilds[ctx.guild.id]['results_channel']
+            error_message += "Use the command in <#"+str(compare)+">"
+        elif channel_type == "picsnvids":
+            compare = vars.guilds[ctx.guild.id]['results_channel']
+            error_message += "Use the command in <#"+str(compare)+">"
 
-        if (ctx.channel.id == compare) or await check_admin(ctx):
+        if (ctx.channel.id == compare):
             return True
+        
+        if ctx.author.id in vars.guilds[ctx.guild.id]['admins']:
+            json_file = league.get_json()
+            if (json_file["current_league"]["owner_guildid"] != 0) and (ctx.guild.id != json_file["current_league"]["owner_guildid"]):
+                await ctx.send("A league is already running in " + bot.get_guild(json_file["current_league"]["owner_guildid"]).name + "\n\nAdmins actions are disabled until that league ends.", ephemeral=True)
+            else:
+                return True
     except: pass
     await ctx.send(error_message, ephemeral=True)
     return False
@@ -151,7 +164,7 @@ async def get_scores_teams(ctx, league, team1, team2):
 @slash_default_member_permission(Permissions.MANAGE_ROLES)
 @slash_option(name="league_name", description="Name of the league", opt_type=OptionType.STRING, required=True)
 @slash_option(name="challonge_link", description="Link to the Challonge tournament", opt_type=OptionType.STRING, required=True)
-@slash_option(name="map_pool", description="Map pool for the tournament, separate maps with ENTER", opt_type=OptionType.STRING, required=True)
+@slash_option(name="map_pool", description="Map pool for the tournament. Separate maps with ,", opt_type=OptionType.STRING, required=True)
 async def start_league(ctx, league_name, challonge_link, map_pool):
     if await check_admin(ctx):
         map_pool = map_pool.replace("\\", "\\\\")
@@ -306,5 +319,15 @@ async def map_banning(ctx, captain_water, captain_fire):
                 except:
                     await msg_map_banning.edit(components=[])
                     return
+            
+
+@slash_command(name="report_scoreboard", description="Attaches the scoreboard on challonge", scopes=vars.guilds.keys())
+@slash_option(name="guards", description="Team that started as guards", opt_type=OptionType.STRING, required=True)
+@slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
+@slash_option(name="scoreboard", description="Screenshot with the scoreboard", opt_type=OptionType.ATTACHMENT, required=True)
+# @slash_option(name="map", description="Map where the match was played", opt_type=OptionType.STRING, required=True)
+async def report_scoreboard(ctx, guards, intruders, scoreboard):
+    if await check_channel(ctx, "results"):
+        await league.report_scoreboard(ctx, guards, intruders, scoreboard)
 
 bot.start(vars.bot_token)
