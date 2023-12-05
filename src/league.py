@@ -336,7 +336,7 @@ async def report_scoreboard(ctx, guards, intruders, scoreboard):
         if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
             post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':scoreboard.proxy_url, 'description': 'Guards:'+guards.upper()+" | Intruders:"+intruders.upper()}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
             if post_response.status_code != 200:
-                await ctx.send("Attachment creation failed. You should report this to PBeGood", ephemeral=True)
+                await ctx.send("Attachment creation failed. Challonge error", ephemeral=True)
                 return
             break
 
@@ -346,3 +346,62 @@ async def report_scoreboard(ctx, guards, intruders, scoreboard):
 
 
     await ctx.send("Guards: "+guards.upper() + "\nIntruders: "+intruders.upper() + "\n\n" + scoreboard.proxy_url)
+
+async def submit_video(ctx, guards, intruders, link):
+    json_file = get_json()
+
+    id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
+
+    matches_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+    if matches_response.status_code != 200:
+        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
+        return
+    matches_json_response = matches_response.json()
+
+    participants_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+    if participants_response.status_code != 200:
+        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
+        return
+    participants_json_response = participants_response.json()
+
+    guards_id = 0
+    intruders_id = 0
+    for participant in participants_json_response:
+        if (participant["participant"]["name"].lower() == guards.lower()):
+            guards_id = participant["participant"]["group_player_ids"][0]
+        
+        if (participant["participant"]["name"].lower() == intruders.lower()):
+            intruders_id = participant["participant"]["group_player_ids"][0]
+
+    if (guards_id == 0 or intruders_id == 0):
+        await ctx.send("The selected team names do not exist in this tournament", ephemeral=True)
+        return
+
+    post_response = None
+    for match in matches_json_response:
+        if (match["match"]["state"] != "open"):
+            continue
+        if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
+            post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':link, 'description': 'VIDEO'}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+            if post_response.status_code != 200:
+                await ctx.send("Video submission failed. Challonge error", ephemeral=True)
+                return
+            break
+    
+    if post_response == None:
+        for match in matches_json_response:
+            if (match["match"]["state"] != "complete"):
+                continue
+            if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
+                post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':link, 'description': 'VIDEO'}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+                if post_response.status_code != 200:
+                    await ctx.send("Video submission failed. Challonge error", ephemeral=True)
+                    return
+                break
+
+    if post_response == None:
+        await ctx.send("No available matches between those teams were found.\nMaybe the match isnt available yet", ephemeral=True)
+        return
+
+
+    await ctx.send(guards.upper() + " vs "+intruders.upper() + "\n\n" + link)

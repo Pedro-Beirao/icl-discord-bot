@@ -54,7 +54,7 @@ async def check_channel(ctx, channel_type):
             compare = vars.guilds[ctx.guild.id]['results_channel']
             error_message += "Use the command in <#"+str(compare)+">"
         elif channel_type == "picsnvids":
-            compare = vars.guilds[ctx.guild.id]['results_channel']
+            compare = vars.guilds[ctx.guild.id]['picsnvids_channel']
             error_message += "Use the command in <#"+str(compare)+">"
 
         if (ctx.channel.id == compare):
@@ -181,7 +181,7 @@ async def start_league(ctx, league_name, challonge_link, map_pool):
 
 @slash_command(name="end_league", description="Ends a league", scopes=vars.guilds.keys())
 @slash_default_member_permission(Permissions.MANAGE_ROLES)
-@slash_option(name="confirm", description="ARE YOU SURE?", opt_type=OptionType.STRING, required=False)
+@slash_option(name="confirm", description="ARE YOU SURE?", opt_type=OptionType.STRING, required=True)
 async def end_league(ctx, confirm="NO"):
     if await check_admin(ctx):
         await league.end_league(ctx, confirm)
@@ -343,6 +343,14 @@ async def map_banning(ctx, captain_water, captain_fire):
 async def report_scoreboard(ctx, guards, intruders, scoreboard):
     if await check_channel(ctx, "results"):
         await league.report_scoreboard(ctx, guards, intruders, scoreboard)
+
+@slash_command(name="submit_video", description="Attaches a video recording of a match on challonge", scopes=vars.guilds.keys())
+@slash_option(name="guards", description="Team that started as guards", opt_type=OptionType.STRING, required=True)
+@slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
+@slash_option(name="link", description="Video link", opt_type=OptionType.STRING, required=True)
+async def submit_video(ctx, guards, intruders, link):
+    if await check_channel(ctx, "picsnvids"):
+        await league.submit_video(ctx, guards, intruders, link)
 
 
 bot.start(vars.bot_token)
