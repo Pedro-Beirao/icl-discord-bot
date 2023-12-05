@@ -77,17 +77,17 @@ def interpolate(f_co, t_co, interval):
 
 @slash_command(name="help", description="Documents every command", scopes=vars.guilds.keys())
 async def help(ctx):
-    emb = Embed(title="Help", description="/help - Shows this prompt", color=0x3498db)
+    emb = Embed(title="Help", description="/help - Shows this prompt\n"
+                                          "/report_scoreboard - Reports the scoreboard of a match to Challonge\n"
+                                          "/submit_video - Submits a video recording of a match to Challonge\n"
+                                          , color=0x3498db)
+    emb.add_field(name="#competitive-matches", value="/map_banning - Handles the map banning process\n"
+                                                     , inline=False)
     emb.add_field(name="#commands", value="/challonge_link - Displays the challonge link of the selected league\n"
                                           "/challonge_image - Displays a live image of the selected league\n"
                                           "/show_delay_tokens - Displays the delay tokens each team has on the current league\n"
                                           "/match_score - Displays the scores of all matches between two teams\n"
                                           , inline=False)
-    emb.add_field(name="#competitive-matches", value="/map_banning - Handles the map banning process\n"
-                                                     , inline=False)
-    
-    emb.add_field(name="#icl-results", value="/report_scoreboard - Reports the scoreboard of a match to Challonge\n"
-                                                     , inline=False)
     try: 
         if ctx.author.id in vars.guilds[ctx.guild.id]['admins']:
             emb.add_field(name="Admin Only", value="/start_league - Starts a league (needs a map pool to be provided + challonge link)\n"
@@ -341,16 +341,16 @@ async def map_banning(ctx, captain_water, captain_fire):
 @slash_option(name="scoreboard", description="Screenshot with the scoreboard", opt_type=OptionType.ATTACHMENT, required=True)
 # @slash_option(name="map", description="Map where the match was played", opt_type=OptionType.STRING, required=True)
 async def report_scoreboard(ctx, guards, intruders, scoreboard):
-    if await check_channel(ctx, "results"):
-        await league.report_scoreboard(ctx, guards, intruders, scoreboard)
+    if await league.report_scoreboard(ctx, guards, intruders, scoreboard):
+         await bot.get_channel(vars.guilds[ctx.guild.id]['results_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\nWater: " + guards.upper() + "\nFire: " + intruders.upper() + "\n\n" + scoreboard.proxy_url)
 
 @slash_command(name="submit_video", description="Attaches a video recording of a match on challonge", scopes=vars.guilds.keys())
 @slash_option(name="guards", description="Team that started as guards", opt_type=OptionType.STRING, required=True)
 @slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
 @slash_option(name="link", description="Video link", opt_type=OptionType.STRING, required=True)
 async def submit_video(ctx, guards, intruders, link):
-    if await check_channel(ctx, "picsnvids"):
-        await league.submit_video(ctx, guards, intruders, link)
+    if await league.submit_video(ctx, guards, intruders, link):
+        await bot.get_channel(vars.guilds[ctx.guild.id]['picsnvids_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\n" + guards.upper() + " vs " + intruders.upper() + "\n\n" + link)
 
 
 bot.start(vars.bot_token)
