@@ -9,6 +9,7 @@ import tasks
 import league
 import vars
 import random
+import re
 
 intents=Intents.DEFAULT
 bot = interactions.Client(intents=intents, send_command_tracebacks=False)
@@ -340,11 +341,21 @@ async def map_banning(ctx, captain_water, captain_fire):
 @slash_command(name="report_scoreboard", description="Attaches the scoreboard on challonge", scopes=vars.guilds.keys())
 @slash_option(name="guards", description="Team that started as guards", opt_type=OptionType.STRING, required=True)
 @slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
+@slash_option(name="map", description="Map where the match was played", opt_type=OptionType.STRING, required=True, autocomplete=True)
 @slash_option(name="scoreboard", description="Screenshot with the scoreboard", opt_type=OptionType.ATTACHMENT, required=True)
-# @slash_option(name="map", description="Map where the match was played", opt_type=OptionType.STRING, required=True)
-async def report_scoreboard(ctx, guards, intruders, scoreboard):
-    if await league.report_scoreboard(ctx, guards, intruders, scoreboard):
+async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
+    if await league.report_scoreboard(ctx, guards, intruders, map, scoreboard):
          await bot.get_channel(vars.guilds[ctx.guild.id]['results_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\nWater: " + guards.upper() + "\nFire: " + intruders.upper() + "\n\n" + scoreboard.proxy_url)
+
+@report_scoreboard.autocomplete("map")
+async def autocomplete(ctx):
+    json_file = league.get_json()
+    ls = []
+    for l in json_file["current_league"]["map_pool"]:
+        stripped = re.sub('[^A-Za-z0-9\']+', ' ', l).strip()
+        ls.insert(1, {'name':l, 'value':stripped})
+
+    await ctx.send(choices=ls)
 
 @slash_command(name="submit_video", description="Attaches a video recording of a match on challonge", scopes=vars.guilds.keys())
 @slash_option(name="guards", description="Team that started as guards", opt_type=OptionType.STRING, required=True)

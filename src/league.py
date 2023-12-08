@@ -30,7 +30,7 @@ async def start_league(ctx, league_name, challonge_link, maps):
     json_file["current_league"] = {"name": league_name, "challonge_link": challonge_link, "map_pool": maps, "delay_tokens": delay_token_dict, "owner_guildid": ctx.guild.id}
     with open('league.json', 'w',) as outfile:
         json.dump(json_file, outfile, indent=4)
-        await ctx.send(league_name + " had been started!", ephemeral=True)
+        await ctx.send(league_name + " has been started!", ephemeral=True)
 
 async def end_league(ctx, confirm):
     json_file = get_json()
@@ -295,7 +295,7 @@ async def when2meet(ctx):
 
     await create_when2meet(ctx, matches_with_names, makeup_matches_with_names)
 
-async def report_scoreboard(ctx, guards, intruders, scoreboard):
+async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
     await ctx.defer(ephemeral=True)
 
     if (not scoreboard.content_type.startswith("image")):
@@ -340,7 +340,7 @@ async def report_scoreboard(ctx, guards, intruders, scoreboard):
         if (match["match"]["state"] != "open"):
             continue
         if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
-            post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':scoreboard.proxy_url, 'description': 'Guards:'+guards.upper()+" | Intruders:"+intruders.upper()}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+            post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':scoreboard.proxy_url, 'description': 'Water:'+guards.upper()+" | Fire:"+intruders.upper() + " | Map: " + map}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
             if post_response.status_code != 200:
                 await ctx.send("Attachment creation failed. Challonge error", ephemeral=True)
                 return False
@@ -352,6 +352,16 @@ async def report_scoreboard(ctx, guards, intruders, scoreboard):
 
     await ctx.send("Scoreboard submitted and referenced in <#" + str(vars.guilds[ctx.guild.id]['results_channel']) + ">")
     return True
+
+
+
+
+
+
+
+
+
+
 
 async def submit_video(ctx, guards, intruders, link):
     await ctx.defer(ephemeral=True)
