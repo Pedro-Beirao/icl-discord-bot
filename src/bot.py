@@ -352,5 +352,8 @@ async def submit_video(ctx, guards, intruders, link):
     if await league.submit_video(ctx, guards, intruders, link):
         await bot.get_channel(vars.guilds[ctx.guild.id]['picsnvids_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\n" + guards.upper() + " vs " + intruders.upper() + "\n\n" + link)
 
+@slash_command(name="rules", description="Links the ICL rulebook", scopes=vars.guilds.keys())
+async def rules(ctx):
+    await ctx.send("https://bit.ly/ICL_Rulebook", ephemeral=True)
 
 bot.start(vars.bot_token)
