@@ -401,7 +401,7 @@ async def submit_video(ctx, guards, intruders, link):
             break
     
     if post_response == None:
-        for match in matches_json_response:
+        for match in reversed(matches_json_response):
             if (match["match"]["state"] != "complete"):
                 continue
             if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):

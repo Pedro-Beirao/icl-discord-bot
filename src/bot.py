@@ -77,23 +77,26 @@ def interpolate(f_co, t_co, interval):
 
 @slash_command(name="help", description="Documents every command", scopes=vars.guilds.keys())
 async def help(ctx):
-    emb = Embed(title="Help", description="/help - Shows this prompt\n"
-                                          "/report_scoreboard - Reports the scoreboard of a match to Challonge\n"
-                                          "/submit_video - Submits a video recording of a match to Challonge\n"
+    emb = Embed(title="Help", description="**Everywhere**\n"
+                                          "> /help - Shows this prompt\n"
+                                          "> /rules - Links the ICL rulebook\n"
+                                          "> /challonge_link - Displays the challonge link of the selected league\n"
+                                          "> /report_scoreboard - Reports the scoreboard of a match to Challonge\n"
+                                          "> /submit_video - Submits a video recording of a match to Challonge\n"
                                           , color=0x3498db)
-    emb.add_field(name="#competitive-matches", value="/map_banning - Handles the map banning process\n"
+    emb.add_field(name="\u200B\n<#"+str(vars.guilds[ctx.guild.id]["competitive_channel"])+">", value="> /map_banning - Handles the map banning process\n"
+                                                        "** **\n"
                                                      , inline=False)
-    emb.add_field(name="#commands", value="/challonge_link - Displays the challonge link of the selected league\n"
-                                          "/challonge_image - Displays a live image of the selected league\n"
-                                          "/show_delay_tokens - Displays the delay tokens each team has on the current league\n"
-                                          "/match_score - Displays the scores of all matches between two teams\n"
+    emb.add_field(name="\u200B\n<#"+str(vars.guilds[ctx.guild.id]["commands_channel"])+">", value="> /challonge_image - Displays a live image of the selected league\n"
+                                          "> /show_delay_tokens - Displays the delay tokens each team has on the current league\n"
+                                          "> /match_score - Displays the scores of all matches between two teams\n"
                                           , inline=False)
     try: 
         if ctx.author.id in vars.guilds[ctx.guild.id]['admins']:
-            emb.add_field(name="Admin Only", value="/start_league - Starts a league (needs a map pool to be provided + challonge link)\n"
-                                                "/end_league - Ends a league\n"
-                                                "/update_delay_tokens - Adds or removes a delay token from a team\n"
-                                                "/when2meet - Creates and shows https://crab.fit links\n"
+            emb.add_field(name="\u200B\nAdmin Only", value="> /start_league - Starts a league (needs a map pool to be provided + challonge link)\n"
+                                                "> /end_league - Ends a league\n"
+                                                "> /update_delay_tokens - Adds or removes a delay token from a team\n"
+                                                "> /when2meet - Creates and shows https://crab.fit links\n"
                                                 , inline=False)
     except: pass
     await ctx.send(embed = emb, ephemeral=True)
@@ -231,13 +234,12 @@ def get_challonge_league_names():
 @slash_command(name="challonge_link", description="Prints the link of the Challong tournament", scopes=vars.guilds.keys())
 @slash_option(name="league_name", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, autocomplete=True)
 async def challonge_link(ctx, league_name):
-    if await check_channel(ctx, "commands"):
-        url = await league.get_challonge_link(ctx, league_name)
+    url = await league.get_challonge_link(ctx, league_name)
 
-        if (url == ""):
-            await ctx.send(league_name + " has no challonge link", ephemeral=True)
-        else:
-            await ctx.send(url)
+    if (url == ""):
+        await ctx.send(league_name + " has no challonge link", ephemeral=True)
+    else:
+        await ctx.send(url, ephemeral=True)
 
 @slash_command(name="challonge_image", description="Display a Live image of a Challonge tournament", scopes=vars.guilds.keys())
 @slash_option(name="league_name", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, autocomplete=True)
