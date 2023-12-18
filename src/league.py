@@ -131,7 +131,7 @@ async def get_post_when2meet(ctx, matches, times):
             if role.name == match[1]:
                 role2 = role.mention
         
-        text_to_send += "\n"+role1+" vs "+role2+"\n<<https://crab.fit/" + json_response["id"] +">>\n"
+        text_to_send += "\n"+role1+" vs "+role2+" \n<<https://crab.fit/" + json_response["id"] +">>\n"
     return text_to_send
 
 async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
@@ -230,7 +230,7 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
         text_to_send += "\nMakeup Matches:\n"
         text_to_send += await get_post_when2meet(ctx, makeup_matches_with_names, times)
     
-    await ctx.send(text_to_send, allowed_mentions=AllowedMentions(roles=ctx.guild.roles), ephemeral=True)
+    await ctx.send(text_to_send, ephemeral=True)
         
 async def when2meet(ctx):
     json_file = get_json()
