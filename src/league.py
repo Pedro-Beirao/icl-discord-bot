@@ -253,7 +253,7 @@ async def when2meet(ctx):
 
     last_played_round = 0
     for match in matches_json_response:
-        if (match["match"]["state"] == "complete" and match["match"]["round"] > last_played_round):
+        if (match["match"]["state"] == "complete" and match["match"]["forfeited"] == None and match["match"]["round"] > last_played_round):
             last_played_round = match["match"]["round"]
 
     for match in matches_json_response:
