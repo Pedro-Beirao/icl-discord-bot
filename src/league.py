@@ -4,10 +4,11 @@ import vars
 from interactions import Embed, AllowedMentions
 import datetime
 from cairosvg import svg2png
+import os
 
 def get_json():
     json_file = {}
-    with open('league.json') as json_file:
+    with open(os.path.dirname(os.path.realpath(__file__))+'/league.json') as json_file:
         json_file = json.load(json_file)
         return json_file
 
@@ -28,7 +29,7 @@ async def start_league(ctx, league_name, challonge_link, maps):
         delay_token_dict[team["participant"]["name"]] = 1
 
     json_file["current_league"] = {"name": league_name, "challonge_link": challonge_link, "map_pool": maps, "delay_tokens": delay_token_dict, "owner_guildid": ctx.guild.id}
-    with open('league.json', 'w',) as outfile:
+    with open(os.path.dirname(os.path.realpath(__file__))+'/league.json', 'w',) as outfile:
         json.dump(json_file, outfile, indent=4)
         await ctx.send(league_name + " has been started!", ephemeral=True)
 
@@ -46,7 +47,7 @@ async def end_league(ctx, confirm):
     
     json_file["previous_leagues"].append({"name": json_file["current_league"]["name"], "challonge_link": json_file["current_league"]["challonge_link"]})
     json_file["current_league"] = {"name": "", "challonge_link": "", "map_pool": [], "delay_tokens": {}, "owner_guildid": 0}
-    with open('league.json', 'w') as outfile:
+    with open(os.path.dirname(os.path.realpath(__file__))+'/league.json', 'w') as outfile:
         json.dump(json_file, outfile, indent=4)
         await ctx.send(previous_league + " has been ended!")
 
@@ -78,7 +79,7 @@ async def update_delay_tokens(ctx, team_name, action):
     elif (action.lower() == "remove"):
         json_file["current_league"]["delay_tokens"][team_name] = 0
     
-    with open('league.json', 'w') as outfile:
+    with open(os.path.dirname(os.path.realpath(__file__))+'/league.json', 'w') as outfile:
         json.dump(json_file, outfile, indent=4)
     
     await show_delay_tokens(ctx, True)

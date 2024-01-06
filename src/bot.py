@@ -14,7 +14,7 @@ import re
 intents=Intents.DEFAULT
 bot = interactions.Client(intents=intents, send_command_tracebacks=False)
 
-currentDir = os.path.realpath(__file__)[:-6]
+currentDir = os.path.dirname(os.path.realpath(__file__))
 print(currentDir)
 
 @listen()
