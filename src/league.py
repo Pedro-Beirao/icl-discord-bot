@@ -233,6 +233,30 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
     
     await ctx.send(text_to_send, ephemeral=True)
         
+
+def get_last_played_round(matches_json):
+    last_played_round = 0
+    for match in matches_json:
+        if (match["match"]["state"] == "complete" and match["match"]["forfeited"] == None and match["match"]["round"] > last_played_round):
+            last_played_round = match["match"]["round"]
+    return last_played_round
+
+async def get_challonge_api(ctx, request):
+    if request.status_code != 200:
+        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
+        return
+    return request.json()
+
+def get_match_names_from_ids(match, participants_json):
+    player1 = ""
+    player2 = ""
+    for participant in participants_json:
+        if (participant["participant"]["group_player_ids"][0] == match[0] or participant["participant"]["id"] == match[0]):
+            player1 = participant["participant"]["name"]
+        if (participant["participant"]["group_player_ids"][0] == match[1] or participant["participant"]["id"] == match[1]):
+            player2 = participant["participant"]["name"]
+    return player1, player2
+
 async def when2meet(ctx):
     json_file = get_json()
 
@@ -246,55 +270,35 @@ async def when2meet(ctx):
     makeup_matches_with_ids = []
 
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
-    matches_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-    if matches_response.status_code != 200:
-        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
-        return
-    matches_json_response = matches_response.json()
 
-    last_played_round = 0
-    for match in matches_json_response:
-        if (match["match"]["state"] == "complete" and match["match"]["forfeited"] == None and match["match"]["round"] > last_played_round):
-            last_played_round = match["match"]["round"]
+    matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
-    for match in matches_json_response:
+    last_played_round = get_last_played_round(matches_json)
+
+    for match in matches_json:
         if (match["match"]["state"] == "open" and (match["match"]["round"] == last_played_round+1 or match["match"]["group_id"] == None)):
             matches_with_ids.append([match["match"]["player1_id"], match["match"]["player2_id"]])
         elif (match["match"]["state"] == "open" and match["match"]["round"] < last_played_round+1):
             makeup_matches_with_ids.append([match["match"]["player1_id"], match["match"]["player2_id"]])
 
-    participants_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-    if participants_response.status_code != 200:
-        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
-        return
-    participants_json_response = participants_response.json()
+    participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
     matches_with_names = []
     makeup_matches_with_names = []
 
     for match in matches_with_ids:
-        player1 = ""
-        player2 = ""
-        for participant in participants_json_response:
-            if (participant["participant"]["group_player_ids"][0] == match[0] or participant["participant"]["id"] == match[0]):
-                player1 = participant["participant"]["name"]
-            if (participant["participant"]["group_player_ids"][0] == match[1] or participant["participant"]["id"] == match[1]):
-                player2 = participant["participant"]["name"]
+        player1, player2 = get_match_names_from_ids(match, participants_json)
         if (player1 != "" and player2 != ""):
             matches_with_names.append([player1, player2])
 
     for match in makeup_matches_with_ids:
-        player1 = ""
-        player2 = ""
-        for participant in participants_json_response:
-            if (participant["participant"]["group_player_ids"][0] == match[0] or participant["participant"]["id"] == match[0]):
-                player1 = participant["participant"]["name"]
-            if (participant["participant"]["group_player_ids"][0] == match[1] or participant["participant"]["id"] == match[1]):
-                player2 = participant["participant"]["name"]
+        player1, player2 = get_match_names_from_ids(match, participants_json)
         if (player1 != "" and player2 != ""):
             makeup_matches_with_names.append([player1, player2])
 
     await create_when2meet(ctx, matches_with_names, makeup_matches_with_names)
+
+
 
 async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
     await ctx.defer(ephemeral=True)
@@ -311,21 +315,13 @@ async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
 
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
 
-    matches_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-    if matches_response.status_code != 200:
-        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
-        return False
-    matches_json_response = matches_response.json()
+    matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
-    participants_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-    if participants_response.status_code != 200:
-        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
-        return False
-    participants_json_response = participants_response.json()
+    participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
     guards_id = 0
     intruders_id = 0
-    for participant in participants_json_response:
+    for participant in participants_json:
         if (participant["participant"]["name"].lower() == guards.lower()):
             guards_id = participant["participant"]["group_player_ids"][0]
         
@@ -337,7 +333,7 @@ async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
         return False
 
     post_response = None
-    for match in matches_json_response:
+    for match in matches_json:
         if (match["match"]["state"] != "open"):
             continue
         if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
@@ -375,21 +371,13 @@ async def submit_video(ctx, guards, intruders, link):
 
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
 
-    matches_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-    if matches_response.status_code != 200:
-        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
-        return False
-    matches_json_response = matches_response.json()
+    matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
-    participants_response = requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-    if participants_response.status_code != 200:
-        await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
-        return False
-    participants_json_response = participants_response.json()
+    participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
     guards_id = 0
     intruders_id = 0
-    for participant in participants_json_response:
+    for participant in participants_json:
         if (participant["participant"]["name"].lower() == guards.lower()):
             guards_id = participant["participant"]["group_player_ids"][0]
         
@@ -401,7 +389,7 @@ async def submit_video(ctx, guards, intruders, link):
         return False
 
     post_response = None
-    for match in matches_json_response:
+    for match in matches_json:
         if (match["match"]["state"] != "open"):
             continue
         if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
@@ -412,7 +400,7 @@ async def submit_video(ctx, guards, intruders, link):
             break
     
     if post_response == None:
-        for match in reversed(matches_json_response):
+        for match in reversed(matches_json):
             if (match["match"]["state"] != "complete"):
                 continue
             if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
