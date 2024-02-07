@@ -49,7 +49,7 @@ async def end_league(ctx, confirm):
     json_file["current_league"] = {"name": "", "challonge_link": "", "map_pool": [], "delay_tokens": {}, "owner_guildid": 0}
     with open(os.path.dirname(os.path.realpath(__file__))+'/league.json', 'w') as outfile:
         json.dump(json_file, outfile, indent=4)
-        await ctx.send(previous_league + " has been ended!")
+        await ctx.send(previous_league + " has been ended!", ephemeral=True)
 
 async def show_delay_tokens(ctx, ephemeral):
     json_file = get_json()
@@ -298,10 +298,16 @@ async def when2meet(ctx):
 
     await create_when2meet(ctx, matches_with_names, makeup_matches_with_names)
 
+def get_participant_id(participant, is_group_stage):
+    if (is_group_stage):
+        return participant["participant"]["group_player_ids"][0]
+    else:
+        return participant["participant"]["id"]
 
-
-async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
-    await ctx.defer(ephemeral=True)
+async def report_scoreboard(ctx, guards, intruders, map, scoreboard, is_bottom_bracket):
+    # messages can only be defered once
+    if not is_bottom_bracket:
+        await ctx.defer(ephemeral=True)
 
     if (not scoreboard.content_type.startswith("image")):
         await ctx.send("File is not an image\nIt is " + scoreboard.content_type, ephemeral=True)
@@ -311,40 +317,50 @@ async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
 
     if (ctx.guild.id != json_file["current_league"]["owner_guildid"]):
         await ctx.send("No League is running", ephemeral=True)
-        return False
+        return 0
 
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
 
-    matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
+    if is_bottom_bracket:
+        id += "_bottom"
 
+    matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
     participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
+
+    is_group_stage = True
+    if (matches_json[-1]["match"]["group_id"] == None):
+        is_group_stage = False
 
     guards_id = 0
     intruders_id = 0
     for participant in participants_json:
         if (participant["participant"]["name"].lower() == guards.lower()):
-            guards_id = participant["participant"]["group_player_ids"][0]
+            guards_id = get_participant_id(participant, is_group_stage)
         
         if (participant["participant"]["name"].lower() == intruders.lower()):
-            intruders_id = participant["participant"]["group_player_ids"][0]
+            intruders_id = get_participant_id(participant, is_group_stage)
 
     if (guards_id == 0 or intruders_id == 0):
         await ctx.send("The selected team names do not exist in this tournament", ephemeral=True)
         return False
 
-    post_response = None
+    match_id = None
     for match in matches_json:
         if (match["match"]["state"] != "open"):
             continue
         if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
-            post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':scoreboard.proxy_url, 'description': 'Water:'+guards.upper()+" | Fire:"+intruders.upper() + " | Map: " + map}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-            if post_response.status_code != 200:
-                await ctx.send("Attachment creation failed. Challonge error", ephemeral=True)
-                return False
-            break
+            match_id = match["match"]["id"]
 
-    if post_response == None:
+    if match_id == None:
+        if (not is_group_stage) and (not is_bottom_bracket):
+            return await report_scoreboard(ctx, guards, intruders, map, scoreboard, True)
+        
         await ctx.send("No available matches between those teams were found.\nMaybe the scoreboard of this match has already been reported\n\nIf you think the bot is wrong, report the match scoreboard without using the bot", ephemeral=True)
+        return False
+
+    post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match_id)+'/attachments.json', json={'url':scoreboard.proxy_url, 'description': 'Water:'+guards.upper()+" | Fire:"+intruders.upper() + " | Map: " + map}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
+    if post_response.status_code != 200:
+        await ctx.send("Attachment creation failed. Challonge error", ephemeral=True)
         return False
 
     await ctx.send("Scoreboard submitted and referenced in <#" + str(vars.guilds[ctx.guild.id]['results_channel']) + ">")
@@ -360,8 +376,10 @@ async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
 
 
 
-async def submit_video(ctx, guards, intruders, link):
-    await ctx.defer(ephemeral=True)
+async def submit_video(ctx, guards, intruders, link, is_bottom_bracket):
+    # messages can only be defered once
+    if not is_bottom_bracket:
+        await ctx.defer(ephemeral=True)
 
     json_file = get_json()
 
@@ -371,18 +389,25 @@ async def submit_video(ctx, guards, intruders, link):
 
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
 
+    if is_bottom_bracket:
+        id += "_bottom"
+
     matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
     participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
+
+    is_group_stage = True
+    if (matches_json[-1]["match"]["group_id"] == None):
+        is_group_stage = False
 
     guards_id = 0
     intruders_id = 0
     for participant in participants_json:
         if (participant["participant"]["name"].lower() == guards.lower()):
-            guards_id = participant["participant"]["group_player_ids"][0]
+            guards_id = get_participant_id(participant, is_group_stage)
         
         if (participant["participant"]["name"].lower() == intruders.lower()):
-            intruders_id = participant["participant"]["group_player_ids"][0]
+            intruders_id = get_participant_id(participant, is_group_stage)
 
     if (guards_id == 0 or intruders_id == 0):
         await ctx.send("The selected team names do not exist in this tournament", ephemeral=True)
@@ -411,9 +436,11 @@ async def submit_video(ctx, guards, intruders, link):
                 break
 
     if post_response == None:
+        if (not is_group_stage) and (not is_bottom_bracket):
+            return await submit_video(ctx, guards, intruders, link, True)
+        
         await ctx.send("No available matches between those teams were found.\nMaybe the match isnt available yet", ephemeral=True)
         return False
-
 
     await ctx.send("Video submitted and referenced in <#" + str(vars.guilds[ctx.guild.id]['picsnvids_channel']) + ">")
     return True

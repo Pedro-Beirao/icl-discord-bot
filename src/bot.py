@@ -344,7 +344,7 @@ async def map_banning(ctx, captain_water, captain_fire):
 @slash_option(name="map", description="Map where the match was played", opt_type=OptionType.STRING, required=True, autocomplete=True)
 @slash_option(name="scoreboard", description="Screenshot with the scoreboard", opt_type=OptionType.ATTACHMENT, required=True)
 async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
-    if await league.report_scoreboard(ctx, guards, intruders, map, scoreboard):
+    if await league.report_scoreboard(ctx, guards, intruders, map, scoreboard, False):
          await bot.get_channel(vars.guilds[ctx.guild.id]['results_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\nWater: " + guards.upper() + "\nFire: " + intruders.upper() + "\n\n" + scoreboard.proxy_url)
 
 @report_scoreboard.autocomplete("map")
@@ -362,7 +362,7 @@ async def autocomplete(ctx):
 @slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
 @slash_option(name="link", description="Video link", opt_type=OptionType.STRING, required=True)
 async def submit_video(ctx, guards, intruders, link):
-    if await league.submit_video(ctx, guards, intruders, link):
+    if await league.submit_video(ctx, guards, intruders, link, False):
         await bot.get_channel(vars.guilds[ctx.guild.id]['picsnvids_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\n" + guards.upper() + " vs " + intruders.upper() + "\n\n" + link)
 
 @slash_command(name="rules", description="Links the ICL rulebook", scopes=vars.guilds.keys())
