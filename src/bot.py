@@ -362,7 +362,7 @@ async def autocomplete(ctx):
 @slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
 @slash_option(name="link", description="Video link", opt_type=OptionType.STRING, required=True)
 async def submit_video(ctx, guards, intruders, link):
-    if await league.submit_video(ctx, guards, intruders, link, False):
+    if await league.submit_video(ctx, guards, intruders, link, True):
         await bot.get_channel(vars.guilds[ctx.guild.id]['picsnvids_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\n" + guards.upper() + " vs " + intruders.upper() + "\n\n" + link)
 
 @slash_command(name="rules", description="Links the ICL rulebook", scopes=vars.guilds.keys())

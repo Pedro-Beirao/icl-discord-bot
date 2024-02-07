@@ -303,6 +303,8 @@ def get_participant_id(participant, is_group_stage):
         return participant["participant"]["group_player_ids"][0]
     else:
         return participant["participant"]["id"]
+    
+
 
 async def report_scoreboard(ctx, guards, intruders, map, scoreboard, is_bottom_bracket):
     # messages can only be defered once
@@ -409,7 +411,10 @@ async def submit_video(ctx, guards, intruders, link, is_bottom_bracket):
         if (participant["participant"]["name"].lower() == intruders.lower()):
             intruders_id = get_participant_id(participant, is_group_stage)
 
-    if (guards_id == 0 or intruders_id == 0):
+    if ((guards_id == 0 or intruders_id == 0)):
+        if (not is_group_stage) and (is_bottom_bracket):
+            return await submit_video(ctx, guards, intruders, link, False)
+
         await ctx.send("The selected team names do not exist in this tournament", ephemeral=True)
         return False
 
@@ -436,8 +441,8 @@ async def submit_video(ctx, guards, intruders, link, is_bottom_bracket):
                 break
 
     if post_response == None:
-        if (not is_group_stage) and (not is_bottom_bracket):
-            return await submit_video(ctx, guards, intruders, link, True)
+        if (not is_group_stage) and (is_bottom_bracket):
+            return await submit_video(ctx, guards, intruders, link, False)
         
         await ctx.send("No available matches between those teams were found.\nMaybe the match isnt available yet", ephemeral=True)
         return False
