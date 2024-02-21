@@ -242,6 +242,9 @@ def get_last_played_round(matches_json):
     return last_played_round
 
 async def get_challonge_api(ctx, request):
+    if request.status_code == 404:
+            await ctx.send("Tournament doesn't exist or the bot does not have access to it", ephemeral=True)
+            return
     if request.status_code != 200:
         await ctx.send("Error with Challonge API. Please try again later", ephemeral=True)
         return
@@ -272,6 +275,8 @@ async def when2meet(ctx):
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
 
     matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
+    if matches_json == None:
+        return False
 
     last_played_round = get_last_played_round(matches_json)
 
@@ -306,10 +311,8 @@ def get_participant_id(participant, is_group_stage):
     
 
 
-async def report_scoreboard(ctx, guards, intruders, map, scoreboard, is_bottom_bracket):
-    # messages can only be defered once
-    if not is_bottom_bracket:
-        await ctx.defer(ephemeral=True)
+async def report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
+    await ctx.defer(ephemeral=True)
 
     if (not scoreboard.content_type.startswith("image")):
         await ctx.send("File is not an image\nIt is " + scoreboard.content_type, ephemeral=True)
@@ -323,24 +326,25 @@ async def report_scoreboard(ctx, guards, intruders, map, scoreboard, is_bottom_b
 
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
 
-    if is_bottom_bracket:
-        id += "_bottom"
+    if stage == "Lower Bracket":
+        id += "_Lower"
+
+    
 
     matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
-    participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
+    if matches_json == None:
+        return False
 
-    is_group_stage = True
-    if (matches_json[-1]["match"]["group_id"] == None):
-        is_group_stage = False
+    participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
 
     guards_id = 0
     intruders_id = 0
     for participant in participants_json:
         if (participant["participant"]["name"].lower() == guards.lower()):
-            guards_id = get_participant_id(participant, is_group_stage)
+            guards_id = get_participant_id(participant, (stage == "Group Stage"))
         
         if (participant["participant"]["name"].lower() == intruders.lower()):
-            intruders_id = get_participant_id(participant, is_group_stage)
+            intruders_id = get_participant_id(participant, (stage == "Group Stage"))
 
     if (guards_id == 0 or intruders_id == 0):
         await ctx.send("The selected team names do not exist in this tournament", ephemeral=True)
@@ -354,10 +358,7 @@ async def report_scoreboard(ctx, guards, intruders, map, scoreboard, is_bottom_b
             match_id = match["match"]["id"]
 
     if match_id == None:
-        if (not is_group_stage) and (not is_bottom_bracket):
-            return await report_scoreboard(ctx, guards, intruders, map, scoreboard, True)
-        
-        await ctx.send("No available matches between those teams were found.\nMaybe the scoreboard of this match has already been reported\n\nIf you think the bot is wrong, report the match scoreboard without using the bot", ephemeral=True)
+        await ctx.send("No available matches between those teams were found.\nMaybe you chose the wrong Stage or maybe the scoreboard of this match has already been reported\n\nIf you think the bot is wrong, report the match scoreboard without using the bot", ephemeral=True)
         return False
 
     post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match_id)+'/attachments.json', json={'url':scoreboard.proxy_url, 'description': 'Water:'+guards.upper()+" | Fire:"+intruders.upper() + " | Map: " + map}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
@@ -378,10 +379,8 @@ async def report_scoreboard(ctx, guards, intruders, map, scoreboard, is_bottom_b
 
 
 
-async def submit_video(ctx, guards, intruders, link, is_bottom_bracket):
-    # messages can only be defered once
-    if not is_bottom_bracket:
-        await ctx.defer(ephemeral=True)
+async def submit_video(ctx, stage, guards, intruders, link):
+    await ctx.defer(ephemeral=True)
 
     json_file = get_json()
 
@@ -391,36 +390,31 @@ async def submit_video(ctx, guards, intruders, link, is_bottom_bracket):
 
     id = json_file["current_league"]["challonge_link"].split()[0].split("/")[-1]
 
-    if is_bottom_bracket:
-        id += "_bottom"
+    if stage == "Lower Bracket":
+        id += "_Lower"
 
     matches_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
+    if matches_json == None:
+        return False
 
     participants_json = await get_challonge_api(ctx, requests.get('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/participants.json', headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'}))
-
-    is_group_stage = True
-    if (matches_json[-1]["match"]["group_id"] == None):
-        is_group_stage = False
 
     guards_id = 0
     intruders_id = 0
     for participant in participants_json:
         if (participant["participant"]["name"].lower() == guards.lower()):
-            guards_id = get_participant_id(participant, is_group_stage)
+            guards_id = get_participant_id(participant, (stage == "Group Stage"))
         
         if (participant["participant"]["name"].lower() == intruders.lower()):
-            intruders_id = get_participant_id(participant, is_group_stage)
+            intruders_id = get_participant_id(participant, (stage == "Group Stage"))
 
     if ((guards_id == 0 or intruders_id == 0)):
-        if (not is_group_stage) and (is_bottom_bracket):
-            return await submit_video(ctx, guards, intruders, link, False)
-
         await ctx.send("The selected team names do not exist in this tournament", ephemeral=True)
         return False
 
     post_response = None
-    for match in matches_json:
-        if (match["match"]["state"] != "open"):
+    for match in reversed(matches_json):
+        if ((match["match"]["state"] != "open") and (match["match"]["state"] != "complete")):
             continue
         if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
             post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':link, 'description': 'VIDEO'}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
@@ -428,23 +422,9 @@ async def submit_video(ctx, guards, intruders, link, is_bottom_bracket):
                 await ctx.send("Video submission failed. Challonge error", ephemeral=True)
                 return False
             break
-    
-    if post_response == None:
-        for match in reversed(matches_json):
-            if (match["match"]["state"] != "complete"):
-                continue
-            if ((match["match"]["player1_id"] == guards_id and match["match"]["player2_id"] == intruders_id) or (match["match"]["player1_id"] == intruders_id and match["match"]["player2_id"] == guards_id)):
-                post_response = requests.post('https://'+vars.challonge_username+':'+vars.challonge_api_key+'@api.challonge.com/v1/tournaments/'+id+'/matches/'+str(match["match"]["id"])+'/attachments.json', json={'url':link, 'description': 'VIDEO'}, headers={'User-Agent': 'Mozilla/5.0 (Platform; Security; OS-or-CPU; Localization; rv:1.4) Gecko/20030624 Netscape/7.1 (ax)'})
-                if post_response.status_code != 200:
-                    await ctx.send("Video submission failed. Challonge error", ephemeral=True)
-                    return False
-                break
 
     if post_response == None:
-        if (not is_group_stage) and (is_bottom_bracket):
-            return await submit_video(ctx, guards, intruders, link, False)
-        
-        await ctx.send("No available matches between those teams were found.\nMaybe the match isnt available yet", ephemeral=True)
+        await ctx.send("No available matches between those teams were found.\nMaybe you chose the wrong Stage or maybe the match isnt available yet.", ephemeral=True)
         return False
 
     await ctx.send("Video submitted and referenced in <#" + str(vars.guilds[ctx.guild.id]['picsnvids_channel']) + ">")

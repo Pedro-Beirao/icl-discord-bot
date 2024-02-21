@@ -339,12 +339,13 @@ async def map_banning(ctx, captain_water, captain_fire):
             
 
 @slash_command(name="report_scoreboard", description="Attaches the scoreboard on challonge", scopes=vars.guilds.keys())
+@slash_option(name="stage", description="Group Stage, Lower Bracket or Upper Bracket", opt_type=OptionType.STRING, required=True, choices=[SlashCommandChoice(name="Group Stage", value="Group Stage"),SlashCommandChoice(name="Upper Bracket", value="Upper Bracket"),SlashCommandChoice(name="Lower Bracket", value="Lower Bracket")]) 
 @slash_option(name="guards", description="Team that started as guards", opt_type=OptionType.STRING, required=True)
 @slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
 @slash_option(name="map", description="Map where the match was played", opt_type=OptionType.STRING, required=True, autocomplete=True)
 @slash_option(name="scoreboard", description="Screenshot with the scoreboard", opt_type=OptionType.ATTACHMENT, required=True)
-async def report_scoreboard(ctx, guards, intruders, map, scoreboard):
-    if await league.report_scoreboard(ctx, guards, intruders, map, scoreboard, False):
+async def report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
+    if await league.report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
          await bot.get_channel(vars.guilds[ctx.guild.id]['results_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\nWater: " + guards.upper() + "\nFire: " + intruders.upper() + "\n\n" + scoreboard.proxy_url)
 
 @report_scoreboard.autocomplete("map")
@@ -358,11 +359,12 @@ async def autocomplete(ctx):
     await ctx.send(choices=ls)
 
 @slash_command(name="submit_video", description="Attaches a video recording of a match on challonge", scopes=vars.guilds.keys())
+@slash_option(name="stage", description="Group Stage, Lower Bracket or Upper Bracket", opt_type=OptionType.STRING, required=True, choices=[SlashCommandChoice(name="Group Stage", value="Group Stage"),SlashCommandChoice(name="Upper Bracket", value="Upper Bracket"),SlashCommandChoice(name="Lower Bracket", value="Lower Bracket")])
 @slash_option(name="guards", description="Team that started as guards", opt_type=OptionType.STRING, required=True)
 @slash_option(name="intruders", description="Team that started as intruders", opt_type=OptionType.STRING, required=True)
 @slash_option(name="link", description="Video link", opt_type=OptionType.STRING, required=True)
-async def submit_video(ctx, guards, intruders, link):
-    if await league.submit_video(ctx, guards, intruders, link, True):
+async def submit_video(ctx, stage, guards, intruders, link):
+    if await league.submit_video(ctx, stage, guards, intruders, link):
         await bot.get_channel(vars.guilds[ctx.guild.id]['picsnvids_channel']).send("Submitted by: <@" + str(ctx.author.id) + ">\n\n" + guards.upper() + " vs " + intruders.upper() + "\n\n" + link)
 
 @slash_command(name="rules", description="Links the ICL rulebook", scopes=vars.guilds.keys())
