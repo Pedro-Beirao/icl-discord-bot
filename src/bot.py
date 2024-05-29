@@ -216,7 +216,8 @@ async def when2meet(ctx, confirm):
 def get_all_league_names():
     json_file = league.get_json()
     ls = []
-    ls += worksheets.leagues
+    for l in json_file["previous_leagues"]:
+        ls += SlashCommandChoice(name=l["name"], value=l["name"])
     if json_file["current_league"]["name"] != "":
         ls.insert(0, SlashCommandChoice(name=json_file["current_league"]["name"], value=json_file["current_league"]["name"]))
     return ls
