@@ -4,7 +4,7 @@ from interactions.api.events import Component, Error
 import requests
 import os
 import io
-import worksheets
+#import worksheets
 import tasks
 import league
 import vars
@@ -90,7 +90,7 @@ async def help(ctx):
                                                      , inline=False)
     emb.add_field(name="\u200B\n<#"+str(vars.guilds[ctx.guild.id]["commands_channel"])+">", value="> /challonge_image - Displays a live image of the selected league\n"
                                           "> /show_delay_tokens - Displays the delay tokens each team has on the current league\n"
-                                          "> /match_score - Displays the scores of all matches between two teams\n"
+                                          #"> /match_score - Displays the scores of all matches between two teams\n"
                                           , inline=False)
     try: 
         if ctx.author.id in vars.guilds[ctx.guild.id]['admins']:
@@ -102,73 +102,73 @@ async def help(ctx):
     except: pass
     await ctx.send(embed = emb, ephemeral=True)
 
-@slash_command(name="match_score", description="Get the scores of all matches between two teams", scopes=vars.guilds.keys())
-@slash_option(name="league", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, autocomplete=True)
-@slash_option(name="team1", description="Team 1", opt_type=OptionType.STRING, required=True)
-@slash_option(name="team2", description="Team 2", opt_type=OptionType.STRING, required=True)
-async def get_scores_teams(ctx, league, team1, team2):
-        if await check_channel(ctx, "commands"):
-            es = []
-            fs = []
+# @slash_command(name="match_score", description="Get the scores of all matches between two teams", scopes=vars.guilds.keys())
+# @slash_option(name="league", description="ICL7, ICL8, Scrim, etc", opt_type=OptionType.STRING, required=True, autocomplete=True)
+# @slash_option(name="team1", description="Team 1", opt_type=OptionType.STRING, required=True)
+# @slash_option(name="team2", description="Team 2", opt_type=OptionType.STRING, required=True)
+# async def get_scores_teams(ctx, league, team1, team2):
+#         if await check_channel(ctx, "commands"):
+#             es = []
+#             fs = []
 
-            curEmbed = 0
+#             curEmbed = 0
 
-            if (league == "any"):
-                for l in worksheets.leagues:
-                    if l == "any": continue
-                    e, f = worksheets.get_scores_teams_aux(l, team1, team2)
-                    es += e
-                    fs += f
-            else:
-                e, f = worksheets.get_scores_teams_aux(league, team1, team2)
-                es += e
-                fs += f
+#             if (league == "any"):
+#                 for l in worksheets.leagues:
+#                     if l == "any": continue
+#                     e, f = worksheets.get_scores_teams_aux(l, team1, team2)
+#                     es += e
+#                     fs += f
+#             else:
+#                 e, f = worksheets.get_scores_teams_aux(league, team1, team2)
+#                 es += e
+#                 fs += f
 
-            if (len(es) > 1):
-                buttons = [Button(style=ButtonStyle.BLUE, label="Previous", custom_id="prev", disabled=True), Button(style=ButtonStyle.BLUE, label="Next", custom_id="next")]
+#             if (len(es) > 1):
+#                 buttons = [Button(style=ButtonStyle.BLUE, label="Previous", custom_id="prev", disabled=True), Button(style=ButtonStyle.BLUE, label="Next", custom_id="next")]
 
-                async def check_get_scores_teams(component: Component) -> bool:
-                    nonlocal curEmbed
-                    if (component.ctx.custom_id == "next"):
-                        curEmbed += 1
-                        if (curEmbed == len(es)-1): buttons[1].disabled = True
-                        buttons[0].disabled = False
-                    elif (component.ctx.custom_id == "prev"):
-                        curEmbed -= 1
-                        if (curEmbed == 0): buttons[0].disabled = True
-                        buttons[1].disabled = False
+#                 async def check_get_scores_teams(component: Component) -> bool:
+#                     nonlocal curEmbed
+#                     if (component.ctx.custom_id == "next"):
+#                         curEmbed += 1
+#                         if (curEmbed == len(es)-1): buttons[1].disabled = True
+#                         buttons[0].disabled = False
+#                     elif (component.ctx.custom_id == "prev"):
+#                         curEmbed -= 1
+#                         if (curEmbed == 0): buttons[0].disabled = True
+#                         buttons[1].disabled = False
                     
-                    buffer = io.BytesIO()
-                    fs[curEmbed][1].save(buffer, format='PNG')
-                    buffer.seek(0) 
-                    f = File(buffer, fs[curEmbed][0])
-                    await component.ctx.edit_origin(embed = es[curEmbed], file=f, components=buttons)
-                    return True
+#                     buffer = io.BytesIO()
+#                     fs[curEmbed][1].save(buffer, format='PNG')
+#                     buffer.seek(0) 
+#                     f = File(buffer, fs[curEmbed][0])
+#                     await component.ctx.edit_origin(embed = es[curEmbed], file=f, components=buttons)
+#                     return True
                 
 
-                buffer = io.BytesIO()
-                fs[curEmbed][1].save(buffer, format='PNG')
-                buffer.seek(0) 
-                f = File(buffer, fs[curEmbed][0])
-                message = await ctx.send(embed = es[curEmbed], file=f, components=buttons)
-                while (True):
-                    try:
-                        await bot.wait_for_component(components=buttons, check=check_get_scores_teams, timeout=60)
-                    except:
-                        await message.edit(components=[])
-                        return
-            elif (len(es) == 1):
-                buffer = io.BytesIO()
-                fs[0][1].save(buffer, format='PNG')
-                buffer.seek(0) 
-                f = File(buffer, fs[0][0])
-                await ctx.send(embed = es[0], file=f)
-            else:
-                await ctx.send("No matches found", ephemeral=True)
+#                 buffer = io.BytesIO()
+#                 fs[curEmbed][1].save(buffer, format='PNG')
+#                 buffer.seek(0) 
+#                 f = File(buffer, fs[curEmbed][0])
+#                 message = await ctx.send(embed = es[curEmbed], file=f, components=buttons)
+#                 while (True):
+#                     try:
+#                         await bot.wait_for_component(components=buttons, check=check_get_scores_teams, timeout=60)
+#                     except:
+#                         await message.edit(components=[])
+#                         return
+#             elif (len(es) == 1):
+#                 buffer = io.BytesIO()
+#                 fs[0][1].save(buffer, format='PNG')
+#                 buffer.seek(0) 
+#                 f = File(buffer, fs[0][0])
+#                 await ctx.send(embed = es[0], file=f)
+#             else:
+#                 await ctx.send("No matches found", ephemeral=True)
 
-@get_scores_teams.autocomplete("league")
-async def autocomplete(ctx):
-    await ctx.send(choices=worksheets.leagues)
+# @get_scores_teams.autocomplete("league")
+# async def autocomplete(ctx):
+#     await ctx.send(choices=worksheets.leagues)
 
 @slash_command(name="start_league", description="Setups and starts a league", scopes=vars.guilds.keys())
 @slash_default_member_permission(Permissions.MANAGE_ROLES)
