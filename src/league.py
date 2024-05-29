@@ -140,9 +140,9 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
 
     today = datetime.date.today()
     friday = f'{(today + datetime.timedelta( (4-today.weekday()) % 7 )):%d%m%Y}'
-    saturday = str(int(friday)+1000000)
-    sunday = str(int(friday)+2000000)
-    monday = str(int(friday)+3000000)
+    saturday = f'{(today + datetime.timedelta( (5-today.weekday()) % 7 )):%d%m%Y}'
+    sunday = f'{(today + datetime.timedelta( (6-today.weekday()) % 7 )):%d%m%Y}'
+    monday = f'{(today + datetime.timedelta( (7-today.weekday()) % 7 )):%d%m%Y}'
 
     if len(friday) != 8: friday = "0" + friday
     if len(saturday) != 8: saturday = "0" + saturday
