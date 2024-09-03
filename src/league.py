@@ -314,6 +314,10 @@ def get_participant_id(participant, is_group_stage):
 async def report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
     await ctx.defer(ephemeral=True)
 
+    if (json_file["current_league"]["name"] == ""):
+        await ctx.send("No league is currently running", ephemeral=True)
+        return
+
     if (not scoreboard.content_type.startswith("image")):
         await ctx.send("File is not an image\nIt is " + scoreboard.content_type, ephemeral=True)
         return False
@@ -381,6 +385,10 @@ async def report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
 
 async def submit_video(ctx, stage, guards, intruders, link):
     await ctx.defer(ephemeral=True)
+
+    if (json_file["current_league"]["name"] == ""):
+        await ctx.send("No league is currently running", ephemeral=True)
+        return
 
     json_file = get_json()
 

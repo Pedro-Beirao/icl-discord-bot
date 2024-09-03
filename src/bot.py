@@ -264,6 +264,11 @@ msg_map_banning = None
 @slash_option(name="captain_fire", description="Who's the captain of team Fire?", opt_type=OptionType.USER, required=True)
 async def map_banning(ctx, captain_water, captain_fire):
     global msg_map_banning
+
+    if (json_file["current_league"]["name"] == ""):
+        await ctx.send("No league is currently running", ephemeral=True)
+        return
+    
     if await check_channel(ctx, "competitive"):
         json_file = league.get_json()
         maps = json_file["current_league"]["map_pool"]
