@@ -13,3 +13,5 @@ bot_token = "" # Bot token
 
 challonge_username = "" # Challonge username
 challonge_api_key = "" # Challonge API key
+
+bloon_auth = "" # Authorization token for the bloon website

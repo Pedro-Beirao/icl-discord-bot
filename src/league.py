@@ -2,6 +2,7 @@ import json
 import requests
 import vars
 from interactions import Embed, AllowedMentions
+from requests.auth import HTTPBasicAuth
 import datetime
 from cairosvg import svg2png
 import os
@@ -110,20 +111,11 @@ async def get_challonge_image(ctx, league_name):
     svg2png(bytestring=svg,write_to='output.png', background_color="white", output_width=1920)
     await ctx.send(file='output.png')
 
-async def get_post_when2meet(ctx, matches, times):
+async def get_post_when2meet(ctx, matches, startDate, endDate):
     json_file = get_json()
     roles = ctx.guild.roles
     text_to_send = ""
     for match in matches:
-        post = {
-            "name": json_file["current_league"]["name"] + " - " + match[0] + " vs " + match[1],
-            "times": times,
-            "timezone": "US/Arizona"
-        }
-        response = requests.post('https://api.crab.fit/event', json=post)
-        json_response = response.json()
-        print ("https://crab.fit/" + json_response["id"])
-
         role1 = match[0]
         role2 = match[1]
         for role in roles:
@@ -131,108 +123,43 @@ async def get_post_when2meet(ctx, matches, times):
                 role1 = role.mention
             if role.name == match[1]:
                 role2 = role.mention
+
+        post = {
+            "MatchName": json_file["current_league"]["name"] + " - " + match[0] + " vs " + match[1], 
+            "Team1Name": match[0], 
+            "Team1RoleId": role1, 
+            "Team2Name": match[1], 
+            "Team2RoleId": role2, 
+            "StartDate": startDate, 
+            "EndDate": endDate,
+            "DateTimeZone": "America/Los_Angeles"
+        }
+        header = {"Authorization" : "Basic " + vars.bloon_auth}
+        response = requests.post('https://bloon.sparkedservers.us/api/v1/createMatch', json=post, headers=header)
+        json_response = response.json()
+        print (json_response)
         
-        text_to_send += "\n"+role1+" vs "+role2+" \n<<https://crab.fit/" + json_response["id"] +">>\n"
+        text_to_send += "\n"+role1+" vs "+role2+" \n" + json_response['matchUrl'] +"\n"
     return text_to_send
 
 async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
     json_file = get_json()
 
     today = datetime.date.today()
-    friday = f'{(today + datetime.timedelta( (4-today.weekday()) % 7 )):%d%m%Y}'
-    saturday = f'{(today + datetime.timedelta( (5-today.weekday()) % 7 )):%d%m%Y}'
-    sunday = f'{(today + datetime.timedelta( (6-today.weekday()) % 7 )):%d%m%Y}'
-    monday = f'{(today + datetime.timedelta( (7-today.weekday()) % 7 )):%d%m%Y}'
+    friday = (today + datetime.timedelta( (4-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
+    #saturday = (today + datetime.timedelta( (5-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
+    #sunday = (today + datetime.timedelta( (6-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
+    monday = (today + datetime.timedelta( (7-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
 
-    if len(friday) != 8: friday = "0" + friday
-    if len(saturday) != 8: saturday = "0" + saturday
-    if len(sunday) != 8: sunday = "0" + sunday
-    if len(monday) != 8: monday = "0" + monday
-
-    times = [
-        "0700-"+friday,
-        "0800-"+friday,
-        "0900-"+friday,
-        "1000-"+friday,
-        "1100-"+friday,
-        "1200-"+friday,
-        "1300-"+friday,
-        "1400-"+friday,
-        "1500-"+friday,
-        "1600-"+friday,
-        "1700-"+friday,
-        "1800-"+friday,
-        "1900-"+friday,
-        "2000-"+friday,
-        "2100-"+friday,
-        "2200-"+friday,
-        "2300-"+friday,
-        "0000-"+saturday,
-        "0100-"+saturday,
-        "0200-"+saturday,
-        "0300-"+saturday,
-        "0400-"+saturday,
-        "0500-"+saturday,
-        "0600-"+saturday,
-        "0700-"+saturday,
-        "0800-"+saturday,
-        "0900-"+saturday,
-        "1000-"+saturday,
-        "1100-"+saturday,
-        "1200-"+saturday,
-        "1300-"+saturday,
-        "1400-"+saturday,
-        "1500-"+saturday,
-        "1600-"+saturday,
-        "1700-"+saturday,
-        "1800-"+saturday,
-        "1900-"+saturday,
-        "2000-"+saturday,
-        "2100-"+saturday,
-        "2200-"+saturday,
-        "2300-"+saturday,
-        "0000-"+sunday,
-        "0100-"+sunday,
-        "0200-"+sunday,
-        "0300-"+sunday,
-        "0400-"+sunday,
-        "0500-"+sunday,
-        "0600-"+sunday,
-        "0700-"+sunday,
-        "0800-"+sunday,
-        "0900-"+sunday,
-        "1000-"+sunday,
-        "1100-"+sunday,
-        "1200-"+sunday,
-        "1300-"+sunday,
-        "1400-"+sunday,
-        "1500-"+sunday,
-        "1600-"+sunday,
-        "1700-"+sunday,
-        "1800-"+sunday,
-        "1900-"+sunday,
-        "2000-"+sunday,
-        "2100-"+sunday,
-        "2200-"+sunday,
-        "2300-"+sunday,
-        "0000-"+monday,
-        "0100-"+monday,
-        "0200-"+monday,
-        "0300-"+monday,
-        "0400-"+monday,
-        "0500-"+monday,
-        "0600-"+monday
-    ]
     text_to_send = "**" + json_file["current_league"]["name"] + "**\n\nWhen2Meets:\n"
 
-    text_to_send += await get_post_when2meet(ctx, matches_with_names, times)
+    text_to_send += await get_post_when2meet(ctx, matches_with_names, friday, monday)
     
     if (len(makeup_matches_with_names) > 0):
         text_to_send += "\nMakeup Matches:\n"
-        text_to_send += await get_post_when2meet(ctx, makeup_matches_with_names, times)
+        text_to_send += await get_post_when2meet(ctx, makeup_matches_with_names, friday, monday)
     
     await ctx.send(text_to_send, ephemeral=True)
-        
 
 def get_last_played_round(matches_json):
     last_played_round = 0
