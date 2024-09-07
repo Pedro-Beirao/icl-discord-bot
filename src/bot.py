@@ -265,19 +265,16 @@ msg_map_banning = None
 async def map_banning(ctx, captain_water, captain_fire):
     global msg_map_banning
 
+    json_file = league.get_json()
+
     if (json_file["current_league"]["name"] == ""):
         await ctx.send("No league is currently running", ephemeral=True)
         return
     
     if await check_channel(ctx, "competitive"):
-        json_file = league.get_json()
         maps = json_file["current_league"]["map_pool"]
         maps_str = ""
-        maps_available = len(maps)
-
-        if maps_available == 0:
-            await ctx.send("No league is currently running", ephemeral=True)
-            return
+        side_chosen = False
 
         for i in range(len(maps)):
             maps_str += maps[i] + "\n"
@@ -296,7 +293,7 @@ async def map_banning(ctx, captain_water, captain_fire):
                 nonlocal emb
                 nonlocal maps
                 nonlocal maps_str
-                nonlocal maps_available
+                nonlocal side_chosen
                 nonlocal buttons
                 nonlocal captain_to_pick
 
@@ -310,32 +307,51 @@ async def map_banning(ctx, captain_water, captain_fire):
                 for m in range(len(maps)):
                     if (component.ctx.values[0] == maps[m]):
                         maps.pop(m)
-                        maps_str = ""
-                        for i in range(len(maps)):
-                            maps_str += maps[i] + "\n"
-                        captain_to_pick = not captain_to_pick
-                        desc = (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s ban\n\n" + maps_str
-                        maps_available-=1
-                        if maps_available == 1:
-                            desc = maps_str
-                        emb = Embed(title="Map Ban", description=desc, color=0x3498db)
                         break
-
-                buttons = [StringSelectMenu(
-                    maps,
-                    placeholder="What map to ban?",
-                    min_values=1,
-                    max_values=1,
-                )]
                 
-                if (maps_available == 1):
+                if (len(maps) > 1):
+                    maps_str = ""
+                    for i in range(len(maps)):
+                        maps_str += maps[i] + "\n"
+                    captain_to_pick = not captain_to_pick
+                    desc = (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s ban\n\n" + maps_str
+                    emb = Embed(title="Map Ban", description=desc, color=0x3498db)
+                    
+                    buttons = [StringSelectMenu(
+                        maps,
+                        placeholder="What map to ban?",
+                        min_values=1,
+                        max_values=1,
+                    )]
+
+                    await component.ctx.edit_origin(embed=emb, components=buttons)
+                    return True
+                
+                elif(side_chosen == False):
+                    buttons = [StringSelectMenu(
+                        ["Guards", "Intruders"],
+                        placeholder="Which starting side",
+                        min_values=1,
+                        max_values=1,
+                    )]
+                    
+                    desc = maps[0] + "\n\n" + (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s pick"
+                    emb = Embed(title="Map Ban", description=desc, color=0x3498db)
+
+                    side_chosen = True
+
+                    await component.ctx.edit_origin(embed=emb, components=buttons)
+                    return True
+                
+                else:
+                    desc = maps[0] + "\n\n" + (captain_water.mention if captain_to_pick else captain_fire.mention) + " starts as " + component.ctx.values[0]
+                    emb = Embed(title="Map Ban", description=desc, color=0x3498db)
+
                     await component.ctx.edit_origin(embed=emb, components=[])
                     return False
-                
-                await component.ctx.edit_origin(embed=emb, components=buttons)
-                return True
         
         msg_map_banning = await ctx.send(embed=emb, components=buttons)
+
         while (True):
                 try:
                     await bot.wait_for_component(components=buttons, check=ban_map, timeout=300)
