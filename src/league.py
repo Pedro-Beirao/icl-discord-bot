@@ -146,18 +146,19 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
     json_file = get_json()
 
     today = datetime.date.today()
-    friday = (today + datetime.timedelta( (4-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
-    #saturday = (today + datetime.timedelta( (5-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
-    #sunday = (today + datetime.timedelta( (6-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
-    monday = (today + datetime.timedelta( (7-today.weekday()) % 7 )).strftime("%d.%m.%Y.00.00")
+    friday = today + datetime.timedelta( (4-today.weekday()) % 7 )
+    monday = friday + datetime.timedelta( (3-today.weekday()) % 7 )
+
+    friday_text = friday.strftime("%d.%m.%Y.00.00")
+    monday_text = monday.strftime("%d.%m.%Y.00.00")
 
     text_to_send = "**" + json_file["current_league"]["name"] + "**\n\nWhen2Meets:\n"
 
-    text_to_send += await get_post_when2meet(ctx, matches_with_names, friday, monday)
+    text_to_send += await get_post_when2meet(ctx, matches_with_names, friday_text, monday_text)
     
     if (len(makeup_matches_with_names) > 0):
         text_to_send += "\nMakeup Matches:\n"
-        text_to_send += await get_post_when2meet(ctx, makeup_matches_with_names, friday, monday)
+        text_to_send += await get_post_when2meet(ctx, makeup_matches_with_names, friday_text, monday_text)
     
     await ctx.send(text_to_send, ephemeral=True)
 
