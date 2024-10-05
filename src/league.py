@@ -242,6 +242,8 @@ def get_participant_id(participant, is_group_stage):
 async def report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
     await ctx.defer(ephemeral=True)
 
+    json_file = get_json()
+
     if (json_file["current_league"]["name"] == ""):
         await ctx.send("No league is currently running", ephemeral=True)
         return
@@ -249,8 +251,6 @@ async def report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
     if (not scoreboard.content_type.startswith("image")):
         await ctx.send("File is not an image\nIt is " + scoreboard.content_type, ephemeral=True)
         return False
-
-    json_file = get_json()
 
     if (ctx.guild.id != json_file["current_league"]["owner_guildid"]):
         await ctx.send("No League is running", ephemeral=True)
