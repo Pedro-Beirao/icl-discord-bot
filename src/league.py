@@ -314,11 +314,11 @@ async def report_scoreboard(ctx, stage, guards, intruders, map, scoreboard):
 async def submit_video(ctx, stage, guards, intruders, link):
     await ctx.defer(ephemeral=True)
 
+    json_file = get_json()
+
     if (json_file["current_league"]["name"] == ""):
         await ctx.send("No league is currently running", ephemeral=True)
         return
-
-    json_file = get_json()
 
     if (ctx.guild.id != json_file["current_league"]["owner_guildid"]):
         await ctx.send("No League is running", ephemeral=True)
