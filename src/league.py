@@ -147,7 +147,7 @@ async def create_when2meet(ctx, matches_with_names, makeup_matches_with_names):
 
     today = datetime.date.today()
     friday = today + datetime.timedelta( (4-today.weekday()) % 7 )
-    monday = friday + datetime.timedelta( (3-today.weekday()) % 7 )
+    monday = friday + datetime.timedelta(3)
 
     friday_text = friday.strftime("%d.%m.%Y.00.00")
     monday_text = monday.strftime("%d.%m.%Y.00.00")
