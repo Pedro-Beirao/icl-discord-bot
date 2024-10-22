@@ -274,6 +274,7 @@ async def map_banning(ctx, captain_water, captain_fire):
     if await check_channel(ctx, "competitive"):
         maps = json_file["current_league"]["map_pool"]
         maps_str = ""
+        banned_maps_str = ""
         side_chosen = False
 
         for i in range(len(maps)):
@@ -293,6 +294,7 @@ async def map_banning(ctx, captain_water, captain_fire):
                 nonlocal emb
                 nonlocal maps
                 nonlocal maps_str
+                nonlocal banned_maps_str
                 nonlocal side_chosen
                 nonlocal buttons
                 nonlocal captain_to_pick
@@ -306,6 +308,7 @@ async def map_banning(ctx, captain_water, captain_fire):
                 
                 for m in range(len(maps)):
                     if (component.ctx.values[0] == maps[m]):
+                        banned_maps_str += "~~" + maps[m] + "~~\n"
                         maps.pop(m)
                         break
                 
@@ -314,7 +317,7 @@ async def map_banning(ctx, captain_water, captain_fire):
                     for i in range(len(maps)):
                         maps_str += maps[i] + "\n"
                     captain_to_pick = not captain_to_pick
-                    desc = (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s ban\n\n" + maps_str
+                    desc = (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s ban\n\n" + maps_str + "\n" + banned_maps_str
                     emb = Embed(title="Map Ban", description=desc, color=0x3498db)
                     
                     buttons = [StringSelectMenu(
@@ -335,7 +338,7 @@ async def map_banning(ctx, captain_water, captain_fire):
                         max_values=1,
                     )]
                     
-                    desc = maps[0] + "\n\n" + (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s pick"
+                    desc = maps[0] + "\n\n" + banned_maps_str + "\n" + (captain_water.mention if captain_to_pick else captain_fire.mention) + "'s pick"
                     emb = Embed(title="Map Ban", description=desc, color=0x3498db)
 
                     side_chosen = True
@@ -344,7 +347,7 @@ async def map_banning(ctx, captain_water, captain_fire):
                     return True
                 
                 else:
-                    desc = maps[0] + "\n\n" + (captain_water.mention if captain_to_pick else captain_fire.mention) + " starts as " + component.ctx.values[0]
+                    desc = maps[0] + "\n\n" + banned_maps_str + "\n" + (captain_water.mention if captain_to_pick else captain_fire.mention) + " starts as " + component.ctx.values[0]
                     emb = Embed(title="Map Ban", description=desc, color=0x3498db)
 
                     await component.ctx.edit_origin(embed=emb, components=[])
