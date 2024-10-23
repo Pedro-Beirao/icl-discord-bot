@@ -394,6 +394,6 @@ async def submit_video(ctx, stage, guards, intruders, link):
 
 @slash_command(name="rules", description="Links the ICL rulebook", scopes=vars.guilds.keys())
 async def rules(ctx):
-    await ctx.send("https://bit.ly/ICL_Rulebook", ephemeral=True)
+    await ctx.send("https://bit.ly/ICL9_Rulebook", ephemeral=True)
 
 bot.start(vars.bot_token)
