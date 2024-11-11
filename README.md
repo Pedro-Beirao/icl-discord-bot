@@ -19,4 +19,4 @@ A Discord bot to manage Intruder competitive tournaments
 
 /update_delay_tokens - Adds or removes a delay token from a team
 
-/when2meet - Creates and shows https://crab.fit/ links
+/when2meet - Creates and shows when2bloon links
